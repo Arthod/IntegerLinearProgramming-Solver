@@ -1,8 +1,9 @@
 from sympy import Symbol, Poly
 import numpy as np
 from scipy.optimize import linprog
+import matplotlib.pyplot as plt
 
-from interior_point import interior_point
+import interior_point
 
 
 EQUAL = 0
@@ -56,22 +57,46 @@ class LP:
         self.objective = expr
 
     def solve(self):
+        self.b = np.array([constraint.expr_RHS for constraint in self.constraints])
+        self.c = np.hstack((np.array([self.max_or_min * coeff for coeff in Poly(self.objective).coeffs()]), np.zeros(self.b.size))).astype(np.float)
         
-        A = []
+        self.A = []
         for constraint in self.constraints:
             l = []
             coeff_dict = constraint.expr_LHS.as_coefficients_dict()
             for id, symbol in self.variables["x"].items():
                 l.append(coeff_dict.get(symbol, 0))
-            A.append(l)
+            self.A.append(l)
+        self.A = np.hstack((np.array(self.A), np.identity(self.b.size))).astype(np.float)
 
-        A = np.vstack(np.array(A), np.identity(len(A))) 
-        print(A)
-        b = np.array([constraint.expr_RHS for constraint in self.constraints])
-        c = np.array([self.max_or_min * coeff for coeff in Poly(self.objective).coeffs()])
-        x_initial = np.array([2, 2])
+        x_initial = np.array([2, 2, 4])
 
-        return interior_point(A, c, x_initial)
+        self.x, self.path = interior_point.interior_point(self.A, self.c, x_initial)
+
+        return self.x
+
+    def plot_solution_path(self):
+        # Plot path
+        xs = []
+        ys = []
+        
+        for p in self.path:
+            xs.append(p[0])
+            ys.append(p[1])
+        plt.plot(xs, ys, label="path", marker="o")
+
+        # Plot y and x axis
+        plt.axhline(y=0, color="black")
+        plt.axvline(x=0, color="black")
+
+        # Plot constraints
+        for i in range(self.b.size):
+            xs = np.array([0, self.b[i] / self.A[i][0]])   # n = x when y = 0  x = c / b
+            ys = (self.b[i] - self.A[i][0] * xs) / self.A[i][1]    # c = ax + by   =>    y = (c - bx) / a
+            plt.plot(xs, ys)
+
+        plt.legend()
+        plt.show()
 
 
 class Constraint:
@@ -87,3 +112,4 @@ class Constraint:
     def __repr__(self):
         # Implement tableau
         pass
+
