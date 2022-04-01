@@ -2,6 +2,8 @@ from sympy import Symbol, Poly
 import numpy as np
 from scipy.optimize import linprog
 
+from interior_point import interior_point
+
 
 EQUAL = 0
 GREATER_EQUAL = 1
@@ -12,8 +14,8 @@ COMPARATORS = {
     LESS_EQUAL: "<="
     }
 
-MAX = -1
-MIN = 1
+MAX = 1
+MIN = -1
 
 
 class LP:
@@ -54,7 +56,22 @@ class LP:
         self.objective = expr
 
     def solve(self):
-        return Simplex.from_lp(self).solve()
+        
+        A = []
+        for constraint in self.constraints:
+            l = []
+            coeff_dict = constraint.expr_LHS.as_coefficients_dict()
+            for id, symbol in self.variables["x"].items():
+                l.append(coeff_dict.get(symbol, 0))
+            A.append(l)
+
+        A = np.vstack(np.array(A), np.identity(len(A))) 
+        print(A)
+        b = np.array([constraint.expr_RHS for constraint in self.constraints])
+        c = np.array([self.max_or_min * coeff for coeff in Poly(self.objective).coeffs()])
+        x_initial = np.array([2, 2])
+
+        return interior_point(A, c, x_initial)
 
 
 class Constraint:
@@ -66,54 +83,6 @@ class Constraint:
     def __repr__(self):
         return str(self.expr_LHS) + COMPARATORS[self.comparator] + str(self.expr_RHS)
 
-
-class Simplex:
-    def __init__(self):
-        """
-        Maximize          z = 10*x1 + 15*x2 + 25*x3
-        Subject to:       x1 + x2 + x3 <= 1000
-                          x1 - 2*x2    <= 0
-                                    x3 <= 340
-        with              x1 >= 0, x2 >= 0
-        
-        A = np.array([[1, 1, 1], [1, -2, 0], [0, 0, 1], [1, 0, 0], [0, 1, 0]])
-        b = np.array([1000, 0, 340, 0, 0])
-        c = np.array([10, 15, 25])
-        """
-
-
-        self.A = None
-        self.b = None
-        self.c = None
-
-
-    @staticmethod
-    def from_lp(lp: LP):
-
-        A = []
-        for constraint in lp.constraints:
-            l = []
-            coeff_dict = constraint.expr_LHS.as_coefficients_dict()
-            for id, symbol in lp.variables["x"].items():
-                l.append(coeff_dict.get(symbol, 0))
-            A.append(l)
-
-        A = np.array(A)
-        b = np.array([constraint.expr_RHS for constraint in lp.constraints])
-        c = np.array([lp.max_or_min * coeff for coeff in Poly(lp.objective).coeffs()])
-
-        simplex = Simplex()
-        simplex.A = A
-        simplex.b = b
-        simplex.c = c
-
-        return simplex
-
-
-    def solve(self):
-        res = linprog(c=self.c, A_ub=self.A, b_ub=self.b, method="revised simplex")
-        print("z = ", -res.fun)
-        print("x = ", res.x)
 
     def __repr__(self):
         # Implement tableau
