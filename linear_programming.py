@@ -22,13 +22,35 @@ MIN = -1
 
 class LP:
     def __init__(self):
+        # Variables and constraints
         self.variables = {}
         self.constraints = []
 
+        # Problem definition
         self.max_or_min = None
         self.objective = None
+        self.A = None
+        self.b = None
+        self.c = None
 
-    def add_variable(self, key, name: str="x") -> Symbol:
+    def add_variable(self, key: any, name: str="x") -> Symbol:
+        """Adds a variable to the LP
+
+        Args:
+            key (any): The key to the variable within the group
+            name (str, optional): Name of the group. Defaults to "x".
+
+        Example:
+            x1 = lp.add_variable(1, name="x")
+            x2 = lp.add_variable(2, name="x")
+
+        Raises:
+            Exception: If variable key is already set within the group
+
+        Returns:
+            Symbol: Sympy symbol
+        """
+
         # Add group of variable if not already registered
         if (name not in self.variables):
             self.variables[name] = {}
@@ -44,7 +66,22 @@ class LP:
         return symbol
 
 
-    def add_constraint(self, expr_LHS: str, comparator: int, expr_RHS):
+    def add_constraint(self, expr_LHS, comparator: int, expr_RHS) -> "Constraint":
+        """Adds a constraint to the LP
+
+        Args:
+            expr_LHS (sympy expression): Left side of the constraint. Can use variables
+            comparator (int): LP.LESS_EQUAL, LP.EQUAL, LP.GREATER_EQUAL
+            expr_RHS (sympy expression): Right side of the constraint. Can use variables (not yet)
+
+        Example:
+            lp.add_constraint(2 * x2, LP.LESS_EQUAL, 14)
+            lp.add_constraint(x1 + 2 * x2, LP.LESS_EQUAL, 25)
+            lp.add_constraint(2 * x1 + 9 * x2, LP.LESS_EQUAL, 80)
+
+        Returns:
+            Constraint: Constraint type
+        """
         assert comparator in COMPARATORS
 
         constr = Constraint(expr_LHS, comparator, expr_RHS)
