@@ -1,3 +1,4 @@
+import scipy
 from sympy import Symbol, Poly
 import numpy as np
 from scipy.optimize import linprog
@@ -69,11 +70,23 @@ class LP:
             self.A.append(l)
         self.A = np.hstack((np.array(self.A), np.identity(self.b.size))).astype(np.float)
 
-        x_initial = np.array([2, 2, 4])
+        x_initial = self.get_initial_feasible_solution()
 
         self.x, self.path = interior_point.interior_point(self.A, self.c, x_initial)
 
         return self.x
+
+    def is_feasible(self, x):
+        return all(np.isclose(self.A @ x, self.b, 0.01))
+
+    def get_initial_feasible_solution(self):
+        amount_vars_slack = self.b.size
+        amount_vars = self.c.size - self.b.size
+
+        x1 = np.hstack((np.full(amount_vars, 2), np.zeros(amount_vars_slack)))
+        x = np.hstack((np.full(amount_vars, 2), self.b - (self.A @ x1)))
+        
+        return x
 
     def plot_solution_path(self):
         # Plot path
@@ -91,8 +104,12 @@ class LP:
 
         # Plot constraints
         for i in range(self.b.size):
-            xs = np.array([0, self.b[i] / self.A[i][0]])   # n = x when y = 0  x = c / b
-            ys = (self.b[i] - self.A[i][0] * xs) / self.A[i][1]    # c = ax + by   =>    y = (c - bx) / a
+            # n = x when y = 0  x = c / b
+            xs = np.array([0, min(3000, self.b[i] / self.A[i][0])])
+
+            # c = ax + by   =>    y = (c - bx) / a
+            ys = (self.b[i] - self.A[i][0] * xs) / self.A[i][1]
+            
             plt.plot(xs, ys)
 
         plt.legend()

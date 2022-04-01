@@ -39,15 +39,12 @@ def interior_point(A, c, x_initial):
     return x, path
 
 
-def is_feasible(A, b, x):
-    return all(np.isclose(A @ x, b))
-
 if __name__ == "__main__":
     
     A = np.array([[1, 1, 1]])
     b = np.array([8])
     c = np.array([1, 2, 0])
-    x_initial = np.array([2, 2, 4])
+    x_initial = np.array([2, 2, 4, 2])
 
 
     """
