@@ -17,6 +17,7 @@ if __name__ == "__main__":
     x = lp.solve()
     print("z = " + str(x @ lp.c))
     print("x = " + str(x))
+    print("iterations = " + str(lp.iterations))
     lp.plot_solution_path()
 
     """

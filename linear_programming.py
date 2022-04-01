@@ -32,6 +32,7 @@ class LP:
         self.A = None
         self.b = None
         self.c = None
+        self.iterations = 0
 
     def add_variable(self, key: any, name: str="x") -> Symbol:
         """Adds a variable to the LP
@@ -109,7 +110,7 @@ class LP:
 
         x_initial = self.get_initial_feasible_solution()
 
-        self.x, self.path = interior_point.interior_point(self.A, self.c, x_initial)
+        self.x, self.path, self.iterations = interior_point.interior_point(self.A, self.c, x_initial)
 
         return self.x
 
