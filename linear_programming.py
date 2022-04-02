@@ -1,3 +1,4 @@
+import itertools
 import scipy
 from sympy import Symbol, Poly
 import numpy as np
@@ -7,9 +8,9 @@ import matplotlib.pyplot as plt
 import interior_point
 
 
+GREATER_EQUAL = -1
 EQUAL = 0
-GREATER_EQUAL = 1
-LESS_EQUAL = 2
+LESS_EQUAL = 1
 COMPARATORS = {
     EQUAL: "==",
     GREATER_EQUAL: ">=",
@@ -24,17 +25,17 @@ class LP:
     def __init__(self):
         # Variables and constraints
         self.variables = {}
-        self.constraints = []
+        self.constraints: list["Constraint"] = []
 
         # Problem definition
-        self.max_or_min = None
+        self.is_maximizing = None
         self.objective = None
         self.A = None
         self.b = None
         self.c = None
         self.iterations = 0
 
-    def add_variable(self, key: any, name: str="x") -> Symbol:
+    def add_variable(self, key: any, name: str="x", lb=None) -> Symbol:
         """Adds a variable to the LP
 
         Args:
@@ -64,10 +65,14 @@ class LP:
         symbol = Symbol("x_" + str(key))
         self.variables[name][key] = symbol
 
+        # Add a constraint for lower bound
+        if (lb != None):
+            self.add_constraint(symbol, GREATER_EQUAL, lb)
+
         return symbol
 
 
-    def add_constraint(self, expr_LHS, comparator: int, expr_RHS) -> "Constraint":
+    def add_constraint(self, expr_LHS, comparator: int, expr_RHS) -> None:
         """Adds a constraint to the LP
 
         Args:
@@ -79,34 +84,36 @@ class LP:
             lp.add_constraint(2 * x2, LP.LESS_EQUAL, 14)
             lp.add_constraint(x1 + 2 * x2, LP.LESS_EQUAL, 25)
             lp.add_constraint(2 * x1 + 9 * x2, LP.LESS_EQUAL, 80)
-
-        Returns:
-            Constraint: Constraint type
         """
         assert comparator in COMPARATORS
 
-        constr = Constraint(expr_LHS, comparator, expr_RHS)
+        if (comparator == EQUAL):
+            self.constraints.append(Constraint(expr_LHS, GREATER_EQUAL, expr_RHS))
+            self.constraints.append(Constraint(expr_LHS, LESS_EQUAL, expr_RHS))
+        else:
+            self.constraints.append(Constraint(expr_LHS, comparator, expr_RHS))
 
-        self.constraints.append(constr)
-
-        return constr
-
-    def set_objective(self, max_or_min, expr):
-        self.max_or_min = max_or_min
+    def set_objective(self, is_maximizing, expr):
+        self.is_maximizing = is_maximizing
         self.objective = expr
 
     def solve(self):
         self.b = np.array([constraint.expr_RHS for constraint in self.constraints])
-        self.c = np.hstack((np.array([self.max_or_min * coeff for coeff in Poly(self.objective).coeffs()]), np.zeros(self.b.size))).astype(np.float)
+        self.c = np.hstack((np.array([self.is_maximizing * coeff for coeff in Poly(self.objective).coeffs()]), np.zeros(self.b.size))).astype(np.float)
         
         self.A = []
-        for constraint in self.constraints:
+        A_slacks = np.identity(self.b.size)
+        for i, constraint in enumerate(self.constraints):
             l = []
             coeff_dict = constraint.expr_LHS.as_coefficients_dict()
             for id, symbol in self.variables["x"].items():
                 l.append(coeff_dict.get(symbol, 0))
             self.A.append(l)
-        self.A = np.hstack((np.array(self.A), np.identity(self.b.size))).astype(np.float)
+            
+            if (constraint.comparator == GREATER_EQUAL):
+                A_slacks[:,i] *= -1
+        self.A = np.hstack((np.array(self.A), A_slacks)).astype(np.float)
+        print(self.A, self.b, self.c)
 
         x_initial = self.get_initial_feasible_solution()
 
@@ -115,14 +122,31 @@ class LP:
         return self.x
 
     def is_feasible(self, x):
-        return all(np.isclose(self.A @ x, self.b, 0.01))
+        return all(np.isclose(self.A @ x, self.b, atol=10e-5))
 
     def get_initial_feasible_solution(self):
         amount_vars_slack = self.b.size
         amount_vars = self.c.size - self.b.size
 
-        x1 = np.hstack((np.full(amount_vars, 2), np.zeros(amount_vars_slack)))
-        x = np.hstack((np.full(amount_vars, 2), self.b - (self.A @ x1)))
+        x = np.zeros(self.c.size)
+        possible_items = []
+        for i in range(-5, 20, 3):
+            possible_items += [i for _ in range(amount_vars)]
+        permutations = itertools.permutations(possible_items, amount_vars)
+        print(permutations)
+        
+        i = 0
+        for x_test in permutations:
+            x1 = np.hstack((np.array(x_test), np.zeros(amount_vars_slack)))
+            x = np.hstack((np.array(x_test), self.b - (self.A @ x1)))
+
+            if (self.is_feasible(x)):
+                break
+        if (not self.is_feasible(x)):
+            raise Exception("No feasible solution found")
+
+            i += 1
+        print("Initial feasible solution: " + str(x))
         
         return x
 

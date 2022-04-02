@@ -16,7 +16,7 @@ def interior_point_iteration(A, c, x_initial, alpha):
 
 
     # 4
-    v = abs(min(c_p))
+    v = np.abs(np.min(c_p))
 
     x_tilde = np.ones(len(c_p)) + (alpha / v) * c_p
 

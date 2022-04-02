@@ -1,24 +1,26 @@
 import linear_programming as LP
-import itertools
 
 
 if __name__ == "__main__":    
 
-    lp = LP.LP()
-    x1 = lp.add_variable(1)
-    x2 = lp.add_variable(2)
-    lp.set_objective(LP.MAX, x1 + 2 * x2)
-    lp.add_constraint(1 * x1 + 1 * x2, LP.LESS_EQUAL, 21)
-    lp.add_constraint(2 * x2, LP.LESS_EQUAL, 14)
-    lp.add_constraint(x1 + 2 * x2, LP.LESS_EQUAL, 25)
-    lp.add_constraint(2 * x1 + 9 * x2, LP.LESS_EQUAL, 80)
 
+    lp = LP.LP()
+    x = lp.add_variable(1)
+    y = lp.add_variable(2)
+    z = lp.add_variable(3)
+    w = lp.add_variable(4)
+    lp.set_objective(LP.MAX, 0.5 * x + 3 * y + z + 4 * w)
+    lp.add_constraint(x + y + z + w, LP.LESS_EQUAL, 40)
+    lp.add_constraint(2 * x + y - z - w, LP.GREATER_EQUAL, 10)
+    lp.add_constraint(w - y, LP.GREATER_EQUAL, 12)
 
     x = lp.solve()
+
     print("z = " + str(x @ lp.c))
     print("x = " + str(x))
     print("iterations = " + str(lp.iterations))
-    lp.plot_solution_path()
+    if (len(lp.variables) == 2):
+        lp.plot_solution_path()
 
     """
     def add(a, b):
