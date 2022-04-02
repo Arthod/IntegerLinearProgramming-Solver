@@ -35,6 +35,43 @@ class LP:
         self.c = None
         self.iterations = 0
 
+
+    def compute_feasible_basis(self):
+        # LP for finding feasible basis
+        F_LP = LP()
+        
+        # Get variables from original problem
+        F_LP.variables = self.variables.copy()
+
+        # Get contraints from original problem
+        F_LP.constraints = self.constraints.copy()
+        
+        # Add SLACK and FEAS variables, and add them to constraints
+        
+        for i in range(len(F_LP.constraints)):
+            slack = F_LP.add_variable(i, name="SLACK")
+            feas  = F_LP.add_variable(i, name="FEAS")
+            if F_LP.constraints[i].comparator != EQUAL:
+                F_LP.constraints[i].comparator = EQUAL
+                F_LP.constraints[i].expr_LHS += slack
+            F_LP.constraints[i].expr_LHS += feas
+            if F_LP.constraints[i].expr_RHS < 0:
+                F_LP.constraints[i].expr_LHS *= -1
+                F_LP.constraints[i].expr_RHS *= -1
+        
+        
+        # Objective function of feasibility LP
+        F_LP.set_objective(MAX, -sum(F_LP.variables["FEAS"].values())*self.is_maximizing)
+
+        # Solve feasibility LP and remove introduces variables
+        feasible_solition = F_LP.solve(first=True)
+        feasible_solution.pop("FEAS")
+
+        # Return if feasible
+        assert self.is_feasible(self, feasible_solution), "Didn't find feasible basis"
+        return feasible_solution
+
+
     def add_variable(self, key: any, name: str="x", lb=None) -> Symbol:
         """Adds a variable to the LP
 
@@ -62,7 +99,7 @@ class LP:
             raise Exception("variable key already used")
 
         # Otherwise add the key to the variable group
-        symbol = Symbol("x_" + str(key))
+        symbol = Symbol(name + "_" + str(key))
         self.variables[name][key] = symbol
 
         # Add a constraint for lower bound
@@ -97,25 +134,31 @@ class LP:
         self.is_maximizing = is_maximizing
         self.objective = expr
 
-    def solve(self):
+    def solve(self, A_provided: bool=False, first: bool=False):
         self.b = np.array([constraint.expr_RHS for constraint in self.constraints])
         self.c = np.hstack((np.array([self.is_maximizing * coeff for coeff in Poly(self.objective).coeffs()]), np.zeros(self.b.size))).astype(np.float)
-        
+
         self.A = []
         A_slacks = np.identity(self.b.size)
         for i, constraint in enumerate(self.constraints):
             l = []
             coeff_dict = constraint.expr_LHS.as_coefficients_dict()
-            for id, symbol in self.variables["x"].items():
-                l.append(coeff_dict.get(symbol, 0))
-            self.A.append(l)
-            
-            if (constraint.comparator == GREATER_EQUAL):
-                A_slacks[:,i] *= -1
+            for name in self.variables:
+                for id, symbol in self.variables[name].items(): # TODO name here instead of "x"?
+                    l.append(coeff_dict.get(symbol, 0))
+                self.A.append(l)
+                
+                if (constraint.comparator == GREATER_EQUAL):
+                    A_slacks[:,i] *= -1
         self.A = np.hstack((np.array(self.A), A_slacks)).astype(np.float)
+        print("self.A, self.b, self.c")
         print(self.A, self.b, self.c)
 
-        x_initial = self.get_initial_feasible_solution()
+        if first:
+            x_initial = self.get_initial_feasible_solution()
+        else:
+            x_initial = self.compute_feasible_basis()
+         
 
         self.x, self.path, self.iterations = interior_point.interior_point(self.A, self.c, x_initial)
 
@@ -130,14 +173,19 @@ class LP:
 
         x = np.zeros(self.c.size)
         possible_items = []
-        for i in range(-5, 20, 3):
+        for i in range(1, 10, 1):
             possible_items += [i for _ in range(amount_vars)]
         permutations = itertools.permutations(possible_items, amount_vars)
+        print("permutations")
         print(permutations)
         
         i = 0
         for x_test in permutations:
             x1 = np.hstack((np.array(x_test), np.zeros(amount_vars_slack)))
+            print("\nx_test\n", x_test)
+            print("\nself.b\n", self.b)
+            print("\nself.A\n", self.A)
+            print("\nx1\n", x1)
             x = np.hstack((np.array(x_test), self.b - (self.A @ x1)))
 
             if (self.is_feasible(x)):
@@ -188,7 +236,7 @@ class Constraint:
         return str(self.expr_LHS) + COMPARATORS[self.comparator] + str(self.expr_RHS)
 
 
-    def __repr__(self):
-        # Implement tableau
-        pass
+#    def __repr__(self):
+#        # Implement tableau
+#        pass
 
