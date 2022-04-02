@@ -21,19 +21,74 @@ MAX = 1
 MIN = -1
 
 
+class Constraint:
+    def __init__(self, expr_LHS, comparator, expr_RHS):
+        self.expr_LHS = expr_LHS
+        self.comparator = comparator
+        self.expr_RHS = expr_RHS
+
+    def __repr__(self):
+        return str(self.expr_LHS) + COMPARATORS[self.comparator] + str(self.expr_RHS)
+
+
+#    def __repr__(self):
+#        # Implement tableau
+#        pass
+
+
+
 class LP:
     def __init__(self):
         # Variables and constraints
-        self.variables = {}
-        self.constraints: list["Constraint"] = []
+        self.variables: dict[str, list[Symbol]] = {}
+        self.constraints: list[Constraint] = []
 
         # Problem definition
         self.is_maximizing = None
         self.objective = None
-        self.A = None
-        self.b = None
-        self.c = None
         self.iterations = 0
+
+    @property
+    def A(self) -> np.array:
+        # Returns A (without slack variables)
+        A = []
+        for _, constraint in enumerate(self.constraints):
+            arr = []
+            coeff_dict = constraint.expr_LHS.as_coefficients_dict()
+            for name in self.variables:
+                for _, symbol in self.variables[name].items(): # TODO name here instead of "x"?
+                    arr.append(coeff_dict.get(symbol, 0))
+                A.append(arr)
+        return np.array(A)
+
+    @property
+    def A_slacks(self) -> np.array:
+        A_slacks = np.identity(len(self.constraints))
+        for i, constraint in enumerate(self.constraints):
+            if (constraint.comparator == GREATER_EQUAL):
+                A_slacks[:,i] *= -1
+
+        print("--")
+        print(self.A)
+        print(A_slacks)
+        return np.hstack((np.array(self.A), A_slacks)).astype(np.float)
+
+    @property
+    def b(self):
+        return np.array([
+            constraint.expr_RHS for constraint in self.constraints])
+
+    @property
+    def c(self):
+        return np.array([self.is_maximizing * coeff for coeff in Poly(self.objective).coeffs()]).astype(np.float)
+
+    @property
+    def c_slacks(self):
+        return np.hstack((
+            self.c,
+            np.zeros(len(self.constraints))
+            )).astype(np.float)
+
 
 
     def compute_feasible_basis(self):
@@ -134,33 +189,23 @@ class LP:
         self.is_maximizing = is_maximizing
         self.objective = expr
 
-    def solve(self, A_provided: bool=False, first: bool=False):
-        self.b = np.array([constraint.expr_RHS for constraint in self.constraints])
-        self.c = np.hstack((np.array([self.is_maximizing * coeff for coeff in Poly(self.objective).coeffs()]), np.zeros(self.b.size))).astype(np.float)
+    def solve(self, first: bool=False):
+        A_slacks = self.A_slacks
+        b = self.b
+        c_slacks = self.c_slacks
 
-        self.A = []
-        A_slacks = np.identity(self.b.size)
-        for i, constraint in enumerate(self.constraints):
-            l = []
-            coeff_dict = constraint.expr_LHS.as_coefficients_dict()
-            for name in self.variables:
-                for id, symbol in self.variables[name].items(): # TODO name here instead of "x"?
-                    l.append(coeff_dict.get(symbol, 0))
-                self.A.append(l)
-                
-                if (constraint.comparator == GREATER_EQUAL):
-                    A_slacks[:,i] *= -1
-        self.A = np.hstack((np.array(self.A), A_slacks)).astype(np.float)
-        print("self.A, self.b, self.c")
+        print("--1")
         print(self.A, self.b, self.c)
+        print("--2")
+        print(A_slacks, b, c_slacks)
 
-        if first:
+        if (first):
             x_initial = self.get_initial_feasible_solution()
         else:
             x_initial = self.compute_feasible_basis()
          
 
-        self.x, self.path, self.iterations = interior_point.interior_point(self.A, self.c, x_initial)
+        self.x, self.path, self.iterations = interior_point.interior_point(A_slacks, c_slacks, x_initial)
 
         return self.x
 
@@ -176,24 +221,22 @@ class LP:
         for i in range(1, 10, 1):
             possible_items += [i for _ in range(amount_vars)]
         permutations = itertools.permutations(possible_items, amount_vars)
-        print("permutations")
-        print(permutations)
         
-        i = 0
         for x_test in permutations:
             x1 = np.hstack((np.array(x_test), np.zeros(amount_vars_slack)))
+            """
             print("\nx_test\n", x_test)
             print("\nself.b\n", self.b)
             print("\nself.A\n", self.A)
             print("\nx1\n", x1)
+            """
             x = np.hstack((np.array(x_test), self.b - (self.A @ x1)))
 
             if (self.is_feasible(x)):
                 break
         if (not self.is_feasible(x)):
             raise Exception("No feasible solution found")
-
-            i += 1
+            
         print("Initial feasible solution: " + str(x))
         
         return x
@@ -224,19 +267,3 @@ class LP:
 
         plt.legend()
         plt.show()
-
-
-class Constraint:
-    def __init__(self, expr_LHS, comparator, expr_RHS):
-        self.expr_LHS = expr_LHS
-        self.comparator = comparator
-        self.expr_RHS = expr_RHS
-
-    def __repr__(self):
-        return str(self.expr_LHS) + COMPARATORS[self.comparator] + str(self.expr_RHS)
-
-
-#    def __repr__(self):
-#        # Implement tableau
-#        pass
-
