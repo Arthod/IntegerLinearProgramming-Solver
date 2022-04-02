@@ -40,7 +40,7 @@ class Constraint:
 class LP:
     def __init__(self):
         # Variables and constraints
-        self.variables: dict[str, list[Symbol]] = {}
+        self.variables: dict[any, Symbol] = {}
         self.constraints: list[Constraint] = []
 
         # Problem definition
@@ -54,11 +54,11 @@ class LP:
         A = []
         for _, constraint in enumerate(self.constraints):
             coeff_dict = constraint.expr_LHS.as_coefficients_dict()
-            for name in self.variables:
-                arr = []
-                for _, symbol in self.variables[name].items(): # TODO name here instead of "x"?
-                    arr.append(coeff_dict.get(symbol, 0))
-                A.append(arr)
+            arr = []
+            for _, symbol in self.variables.items(): # TODO name here instead of "x"?
+                arr.append(coeff_dict.get(symbol, 0))
+            A.append(arr)
+
         return np.array(A)
 
     @property
@@ -68,9 +68,6 @@ class LP:
             if (constraint.comparator == GREATER_EQUAL):
                 A_slacks[:,i] *= -1
 
-        print("--")
-        print(self.A)
-        print(A_slacks)
         return np.hstack((np.array(self.A), A_slacks)).astype(np.float)
 
     @property
@@ -80,7 +77,14 @@ class LP:
 
     @property
     def c(self):
-        return np.array([self.is_maximizing * coeff for coeff in Poly(self.objective).coeffs()]).astype(np.float)
+        coeff_dict = self.objective.as_coefficients_dict()
+
+        c = []
+        for _, symbol in self.variables.items(): # TODO name here instead of "x"?
+            c.append(coeff_dict.get(symbol, 0) * self.is_maximizing)
+            
+        return np.array(c).astype(np.float)
+        #return np.array([self.is_maximizing * coeff for coeff in Poly(self.objective).coeffs()]).astype(np.float)
 
     @property
     def c_slacks(self):
@@ -105,21 +109,18 @@ class LP:
         
         # Add FEAS variables, and add them to constraints
         feas_index = 1
+        feas_variables = []
         for constraint in F_LP.constraints:
             if constraint.expr_RHS < 0:
                 constraint.expr_LHS *= -1
                 constraint.expr_RHS *= -1
-            feas = F_LP.add_variable(feas_index, name="FEAS")
-            constraint.expr_LHS += feas
+            feas_variable = F_LP.add_variable(feas_index, name="FEAS")
+            feas_variables.append(feas_variable)
+            constraint.expr_LHS += feas_variable
             feas_index += 1
         
-        print("variables")
-        print(F_LP.variables)
-        print("constraints")
-        print(F_LP.constraints)
-        
         # Objective function of feasibility LP
-        F_LP.set_objective(MAX, -sum(F_LP.variables["FEAS"].values())*self.is_maximizing)
+        F_LP.set_objective(MAX, -sum(feas_variables)*self.is_maximizing)
 
         # Solve feasibility LP and remove introduces variables
         feasible_solition = F_LP.solve(first=True)
@@ -130,7 +131,7 @@ class LP:
         return feasible_solution
 
 
-    def add_variable(self, key: any, name: str="x", lb=None) -> Symbol:
+    def add_variable(self, key: any, name: str="x") -> Symbol:
         """Adds a variable to the LP
 
         Args:
@@ -147,22 +148,15 @@ class LP:
         Returns:
             Symbol: Sympy symbol
         """
-
-        # Add group of variable if not already registered
-        if (name not in self.variables):
-            self.variables[name] = {}
+        key = f"{name}_{key}"
 
         # If key already in the group of the variable we raise an exception
-        if (key in self.variables[name]):
+        if (key in self.variables):
             raise Exception("variable key already used")
 
         # Otherwise add the key to the variable group
-        symbol = Symbol(name + "_" + str(key))
-        self.variables[name][key] = symbol
-
-        # Add a constraint for lower bound
-        if (lb != None):
-            self.add_constraint(symbol, GREATER_EQUAL, lb)
+        symbol = Symbol(key)
+        self.variables[key] = symbol
 
         return symbol
 
@@ -197,9 +191,6 @@ class LP:
         b = self.b
         c_slacks = self.c_slacks
 
-        print("--1")
-        print(self.A, self.b, self.c)
-        print("--2")
         print(A_slacks, b, c_slacks)
 
         if (first):
@@ -212,12 +203,12 @@ class LP:
 
         return self.x
 
-    def is_feasible(self, x):
-        return all(np.isclose(self.A @ x, self.b, atol=10e-5))
+    def is_feasible(self, A, b, x):
+        return all(np.isclose(A @ x, b, atol=10e-5))
 
     def get_initial_feasible_solution(self):
         amount_vars_slack = self.b.size
-        amount_vars = self.c.size - self.b.size
+        amount_vars = self.c_slacks.size - self.b.size
 
         x = np.zeros(self.c.size)
         possible_items = []
@@ -233,11 +224,11 @@ class LP:
             print("\nself.A\n", self.A)
             print("\nx1\n", x1)
             """
-            x = np.hstack((np.array(x_test), self.b - (self.A @ x1)))
+            x = np.hstack((np.array(x_test), self.b - (self.A_slacks @ x1)))
 
-            if (self.is_feasible(x)):
+            if (self.is_feasible(self.A_slacks, self.b, x)):
                 break
-        if (not self.is_feasible(x)):
+        if (not self.is_feasible(self.A_slacks, self.b, x)):
             raise Exception("No feasible solution found")
             
         print("Initial feasible solution: " + str(x))
