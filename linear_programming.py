@@ -53,9 +53,9 @@ class LP:
         # Returns A (without slack variables)
         A = []
         for _, constraint in enumerate(self.constraints):
-            arr = []
             coeff_dict = constraint.expr_LHS.as_coefficients_dict()
             for name in self.variables:
+                arr = []
                 for _, symbol in self.variables[name].items(): # TODO name here instead of "x"?
                     arr.append(coeff_dict.get(symbol, 0))
                 A.append(arr)
@@ -94,6 +94,8 @@ class LP:
     def compute_feasible_basis(self):
         # LP for finding feasible basis
         F_LP = LP()
+
+        A_slacks = self.A_slacks
         
         # Get variables from original problem
         F_LP.variables = self.variables.copy()
@@ -101,19 +103,20 @@ class LP:
         # Get contraints from original problem
         F_LP.constraints = self.constraints.copy()
         
-        # Add SLACK and FEAS variables, and add them to constraints
+        # Add FEAS variables, and add them to constraints
+        feas_index = 1
+        for constraint in F_LP.constraints:
+            if constraint.expr_RHS < 0:
+                constraint.expr_LHS *= -1
+                constraint.expr_RHS *= -1
+            feas = F_LP.add_variable(feas_index, name="FEAS")
+            constraint.expr_LHS += feas
+            feas_index += 1
         
-        for i in range(len(F_LP.constraints)):
-            slack = F_LP.add_variable(i, name="SLACK")
-            feas  = F_LP.add_variable(i, name="FEAS")
-            if F_LP.constraints[i].comparator != EQUAL:
-                F_LP.constraints[i].comparator = EQUAL
-                F_LP.constraints[i].expr_LHS += slack
-            F_LP.constraints[i].expr_LHS += feas
-            if F_LP.constraints[i].expr_RHS < 0:
-                F_LP.constraints[i].expr_LHS *= -1
-                F_LP.constraints[i].expr_RHS *= -1
-        
+        print("variables")
+        print(F_LP.variables)
+        print("constraints")
+        print(F_LP.constraints)
         
         # Objective function of feasibility LP
         F_LP.set_objective(MAX, -sum(F_LP.variables["FEAS"].values())*self.is_maximizing)
