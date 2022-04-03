@@ -35,10 +35,14 @@ class LP:
         self.c = None
         self.iterations = 0
 
+        self.vars_slack_amount = 0
+        self.vars_artificial_amount = 0
+
 
     def compute_feasible_basis(self):
         # LP for finding feasible basis
         F_LP = LP()
+        F_LP.vars_slack_amount = self.vars_slack_amount
         
         # Get variables from original problem
         F_LP.variables = self.variables.copy()
@@ -46,28 +50,29 @@ class LP:
         # Get contraints from original problem
         F_LP.constraints = self.constraints.copy()
         
-        # Add SLACK and FEAS variables, and add them to constraints
-        
+        # Add artificial variables, and add them to constraints
         artificial_variables = []
         for i, constraint in enumerate(F_LP.constraints):
-            if (constraint.comparator != LESS_EQUAL):
-                artificial_variable = F_LP.add_variable(i, name="_artificial")
-                artificial_variables.append(artificial_variable)
+            #if (constraint.comparator_prev != LESS_EQUAL):
+            artificial_variable = F_LP.add_variable(i, name="_1artificial")
+            artificial_variables.append(artificial_variable)
 
-                constraint.expr_LHS += artificial_variable
-                #if constraint.expr_RHS < 0:
-                #    constraint.expr_LHS *= -1
-                #    constraint.expr_RHS *= -1
+            constraint.expr_LHS += artificial_variable
+            F_LP.vars_artificial_amount += 1
+            #if constraint.expr_RHS < 0:
+            #    constraint.expr_LHS *= -1
+            #    constraint.expr_RHS *= -1
         
         
         # Objective function of feasibility LP
         F_LP.set_objective(self.is_maximizing, -sum(artificial_variables))
 
         # Solve feasibility LP and remove introduces variables
-        x_feasible = F_LP.solve(first=True)
-
+        x_feasible = F_LP._solve()
+        
         # Return if feasible
-        assert self.is_feasible(self, x_feasible), "Didn't find feasible basis"
+        assert F_LP.is_feasible(x_feasible), "Didn't find feasible basis"
+
         return x_feasible
 
 
@@ -122,72 +127,110 @@ class LP:
         else:
             self.constraints.append(Constraint(expr_LHS, comparator, expr_RHS))
 
-    def set_objective(self, is_maximizing, expr):
-        self.is_maximizing = is_maximizing
-        self.objective = expr
-
-    def solve(self, first: bool=False):
-        self.b = np.array([constraint.expr_RHS for constraint in self.constraints])
-        
+    def compute_c(self):
         coeff_dict = self.objective.as_coefficients_dict()
         c = []
         for _, symbol in self.variables.items(): # TODO name here instead of "x"?
             c.append(coeff_dict.get(symbol, 0) * self.is_maximizing)
-        self.c = np.hstack((np.array(c), np.zeros(self.b.size))).astype(np.float)
+        self.c = np.array(c).astype(np.float)
 
-        self.A = []
-        A_slacks = np.identity(self.b.size)
-        for i, constraint in enumerate(self.constraints):
+    def set_objective(self, is_maximizing, expr):
+        self.is_maximizing = is_maximizing
+        self.objective = expr
+
+    def solve(self):
+        x = self._solve(lp_is_raw=True)
+
+        # Throw away slack solution
+        x = x[:len(self.variables)]
+
+        self.compute_c()
+
+        return x
+
+    def _solve(self, lp_is_raw: bool=False):
+        lp = self
+        if (lp_is_raw): # if there are no slack or artificial vars
+            # Copy the problem LP and add slack variables
+            lp = lp_slack = LP()
+
+            # Objective
+            lp_slack.set_objective(self.is_maximizing, self.objective)
+
+            # Get variables from original problem
+            lp_slack.variables = self.variables.copy()
+
+            # Get contraints from original problem
+            lp_slack.constraints = self.constraints.copy()
+
+            # Add slack variables where constraint isn't EQUAL.
+            # And set constraint to EQUAL
+            slack_variables = []
+            for i, constraint in enumerate(lp_slack.constraints):
+                if (constraint.comparator != EQUAL):
+                    slack_variable = lp_slack.add_variable(i, name="_0slack")
+                    slack_variables.append(slack_variable)
+                    constraint.expr_LHS += constraint.comparator * slack_variable
+
+                    lp_slack.vars_slack_amount += 1
+                    constraint.comparator_prev = constraint.comparator
+                    constraint.comparator = EQUAL
+
+        lp.b = np.array([constraint.expr_RHS for constraint in lp.constraints])
+        
+        coeff_dict = lp.objective.as_coefficients_dict()
+        c = []
+        for _, symbol in lp.variables.items(): # TODO name here instead of "x"?
+            c.append(coeff_dict.get(symbol, 0) * lp.is_maximizing)
+        lp.c = np.array(c).astype(np.float)
+
+        lp.A = []
+        for i, constraint in enumerate(lp.constraints):
             arr = []
             coeff_dict = constraint.expr_LHS.as_coefficients_dict()
-            for _, symbol in self.variables.items(): # TODO name here instead of "x"?
+            for _, symbol in lp.variables.items(): # TODO name here instead of "x"?
                 arr.append(coeff_dict.get(symbol, 0))
-            self.A.append(arr)
-            
-            if (constraint.comparator == GREATER_EQUAL):
-                A_slacks[:,i] *= -1
-        self.A = np.hstack((np.array(self.A), A_slacks)).astype(np.float)
+            lp.A.append(arr)
+        lp.A = np.array(lp.A).astype(np.float)
 
+        if (lp_is_raw):
+            x_initial = lp.compute_feasible_basis()
 
-        if (first):
-            x_initial = self.get_initial_feasible_solution()
+            # Throw away artificial solution
+            x_initial = x_initial[:len(lp.variables)]
+
         else:
-            x_initial = self.compute_feasible_basis()
+            x_initial = self.get_initial_feasible_solution()
          
 
-        self.x, self.path, self.iterations = interior_point.interior_point(self.A, self.c, x_initial)
+        lp.x, lp.path, lp.iterations = interior_point.interior_point(lp.A, lp.c, x_initial)
 
-        return self.x
+        return lp.x
 
     def is_feasible(self, x):
         return all(np.isclose(self.A @ x, self.b, atol=10e-5))
 
     def get_initial_feasible_solution(self):
-        amount_vars_slack = self.b.size
-        amount_vars = self.c.size - self.b.size
+        amount_vars_slack = self.vars_slack_amount
+        amount_vars = self.c.size - self.vars_slack_amount - self.vars_artificial_amount
 
         x = np.zeros(self.c.size)
         possible_items = []
         for i in range(1, 10, 1):
-            possible_items += [1 for _ in range(1)]#amount_vars)]
-        permutations = itertools.permutations(possible_items, amount_vars)
+            possible_items += [i for _ in range(amount_vars)]#amount_vars)]
+        permutations = itertools.permutations(possible_items, amount_vars + amount_vars_slack)
         
-        print(self.A, self.b, self.c)
-        i = 0
-
         for x_test in permutations:
-            x1 = np.hstack((np.array(x_test), np.zeros(amount_vars_slack)))
+            x1 = np.hstack((np.array(x_test), np.zeros(self.vars_artificial_amount)))
             x = np.hstack((np.array(x_test), self.b - (self.A @ x1)))
 
+            print(x)
             if (self.is_feasible(x)):
                 if (np.min(self.b - (self.A @ x1)) <= 0):
                     continue
                 break
         if (not self.is_feasible(x)):
             raise Exception("No feasible solution found")
-
-            i += 1
-        print("Initial feasible solution: " + str(x))
         
         return x
 
@@ -223,6 +266,7 @@ class Constraint:
     def __init__(self, expr_LHS, comparator, expr_RHS):
         self.expr_LHS = expr_LHS
         self.comparator = comparator
+        self.comparator_prev = None
         self.expr_RHS = expr_RHS
 
     def __repr__(self):
