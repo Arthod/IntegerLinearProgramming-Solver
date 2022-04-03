@@ -1,4 +1,5 @@
 import itertools
+import random
 import scipy
 from sympy import Symbol, Poly
 import numpy as np
@@ -120,15 +121,24 @@ class LP:
             feas_index += 1
         
         # Objective function of feasibility LP
-        F_LP.set_objective(MAX, -sum(feas_variables)*self.is_maximizing)
+        F_LP.set_objective(MAX, -sum(feas_variables) * self.is_maximizing)
 
         # Solve feasibility LP and remove introduces variables
-        feasible_solition = F_LP.solve(first=True)
-        feasible_solution.pop("FEAS")
+        x_feasible = F_LP.solve(first=True)
+        print(x_feasible)
+
+        # Throw away artificial solution 
+        amount_vars_slack = len(F_LP.constraints)
+        amount_vars = len(F_LP.variables) - len(F_LP.constraints)
+        x_feasible = np.hstack((
+            x_feasible[0:amount_vars],
+            x_feasible[x_feasible.size - amount_vars_slack:x_feasible.size]
+            ))
+        print(x_feasible)
 
         # Return if feasible
-        assert self.is_feasible(self, feasible_solution), "Didn't find feasible basis"
-        return feasible_solution
+        #assert self.is_feasible(self.A_slacks, self.b, x_feasible), "Didn't find feasible basis"
+        return x_feasible
 
 
     def add_variable(self, key: any, name: str="x") -> Symbol:
@@ -191,47 +201,58 @@ class LP:
         b = self.b
         c_slacks = self.c_slacks
 
-        print(A_slacks, b, c_slacks)
-
+        amount_vars = c_slacks.size - b.size
         if (first):
-            x_initial = self.get_initial_feasible_solution()
+            # Re-arrange the slack variables for the "get initial feasible solution calc,"
+            amount_vars_slack = b.size
+
+            A_slacks_rearranged = np.hstack((
+                A_slacks[:,0:amount_vars - amount_vars_slack],
+                A_slacks[:,amount_vars:A_slacks.size],
+                A_slacks[:,amount_vars - amount_vars_slack:amount_vars]
+                ))
+            c_slacks_rearranged = np.hstack((
+                c_slacks[0:amount_vars - amount_vars_slack],
+                c_slacks[amount_vars:A_slacks.size],
+                c_slacks[amount_vars - amount_vars_slack:amount_vars]
+                ))
+
+            x_initial = self.get_initial_feasible_solution(A_slacks_rearranged, b, c_slacks_rearranged)
         else:
             x_initial = self.compute_feasible_basis()
          
+        print("initial feasible found: " + str(x_initial))
 
         self.x, self.path, self.iterations = interior_point.interior_point(A_slacks, c_slacks, x_initial)
+        self.x = self.x[:amount_vars]
 
         return self.x
 
     def is_feasible(self, A, b, x):
-        return all(np.isclose(A @ x, b, atol=10e-5))
+        print(A, b)
+        print(A @ x)
+        return all(np.isclose(A @ x, b, atol=10e-3))
 
-    def get_initial_feasible_solution(self):
-        amount_vars_slack = self.b.size
-        amount_vars = self.c_slacks.size - self.b.size
+    def get_initial_feasible_solution(self, A_slacks, b, c_slacks):
+        amount_vars_slack = b.size
+        amount_vars = c_slacks.size - b.size
 
-        x = np.zeros(self.c.size)
+        x = np.zeros(c_slacks.size)
         possible_items = []
         for i in range(1, 10, 1):
-            possible_items += [i for _ in range(amount_vars)]
+            possible_items += [1 for _ in range(1)]#amount_vars)]
         permutations = itertools.permutations(possible_items, amount_vars)
-        
+
         for x_test in permutations:
             x1 = np.hstack((np.array(x_test), np.zeros(amount_vars_slack)))
-            """
-            print("\nx_test\n", x_test)
-            print("\nself.b\n", self.b)
-            print("\nself.A\n", self.A)
-            print("\nx1\n", x1)
-            """
-            x = np.hstack((np.array(x_test), self.b - (self.A_slacks @ x1)))
-
-            if (self.is_feasible(self.A_slacks, self.b, x)):
-                break
-        if (not self.is_feasible(self.A_slacks, self.b, x)):
-            raise Exception("No feasible solution found")
+            x = np.hstack((np.array(x_test), b - (A_slacks @ x1)))
             
-        print("Initial feasible solution: " + str(x))
+            if (self.is_feasible(A_slacks, b, x)):
+                if (np.min(b - (A_slacks @ x1)) <= 0):
+                    continue
+                break
+        if (not self.is_feasible(A_slacks, b, x)):
+            raise Exception("No feasible solution found")
         
         return x
 
