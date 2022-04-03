@@ -5,14 +5,14 @@ if __name__ == "__main__":
 
 
     lp = LP.LP()
-    x1 = lp.add_variable(1)
-    x2 = lp.add_variable(2)
-    x3 = lp.add_variable(3)
-    x4 = lp.add_variable(4)
-    lp.set_objective(LP.MAX, 0.5 * x1 + 3 * x2 + x3 + 4 * x4)
-    lp.add_constraint(x1 + x2 + x3 + x4, LP.LESS_EQUAL, 40)
-    lp.add_constraint(2 * x1 + x2 - x3 - x4, LP.GREATER_EQUAL, 10)
-    lp.add_constraint(x4 - x2, LP.GREATER_EQUAL, 12)
+    x = lp.add_variable(1)
+    y = lp.add_variable(2)
+    z = lp.add_variable(3)
+    w = lp.add_variable(4)
+    lp.set_objective(LP.MAX, 0.5 * x + 3 * y + z + 4 * w)
+    lp.add_constraint(x + y + z + w, LP.LESS_EQUAL, 40)
+    lp.add_constraint(2 * x + y - z - w, LP.GREATER_EQUAL, 10)
+    lp.add_constraint(w - y, LP.GREATER_EQUAL, 12)
 
     x = lp.solve()
 
