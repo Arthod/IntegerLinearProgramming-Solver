@@ -3,7 +3,7 @@ import linear_programming as LP
 
 if __name__ == "__main__":    
 
-    lp = LP.LP()
+    lp = LP.LinearProgrammingProblem()
     x = lp.add_variable(1)
     y = lp.add_variable(2)
     z = lp.add_variable(3)
@@ -12,6 +12,7 @@ if __name__ == "__main__":
     lp.add_constraint(x + y + z + w, LP.LESS_EQUAL, 40)
     lp.add_constraint(2 * x + y - z - w, LP.GREATER_EQUAL, 10)
     lp.add_constraint(w - y, LP.GREATER_EQUAL, 12)
+    
     """
     lp = LP.LP()
     x = lp.add_variable(1)
