@@ -2,6 +2,8 @@
 
 Solver for (Integer) Linear Programming Problems
 
+## Example
+
 ```
 if __name__ == "__main__":
     lp = LP.LP()
@@ -19,3 +21,8 @@ if __name__ == "__main__":
     print("x = " + str(x))
     lp.plot_solution_path()
 ```
+
+## Contributors
+
+Ahmad Othman    (https://github.com/arthod)
+Rasmus Nuko Jørgensen   (https://github.com/rasmusnuko)
