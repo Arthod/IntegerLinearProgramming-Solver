@@ -24,5 +24,7 @@ if __name__ == "__main__":
 
 ## Contributors
 
+```
 Ahmad Othman    (https://github.com/arthod)
 Rasmus Nuko Jørgensen   (https://github.com/rasmusnuko)
+```
