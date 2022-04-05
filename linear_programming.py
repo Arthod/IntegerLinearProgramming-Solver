@@ -65,7 +65,7 @@ class LP:
         
         
         # Objective function of feasibility LP
-        F_LP.set_objective(self.is_maximizing, -sum(artificial_variables))
+        F_LP.set_objective(MAX, -sum(artificial_variables) * self.is_maximizing)
 
         # Solve feasibility LP and remove introduces variables
         x_feasible = F_LP._solve()
@@ -271,9 +271,3 @@ class Constraint:
 
     def __repr__(self):
         return str(self.expr_LHS) + COMPARATORS[self.comparator] + str(self.expr_RHS)
-
-
-#    def __repr__(self):
-#        # Implement tableau
-#        pass
-

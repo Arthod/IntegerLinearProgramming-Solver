@@ -3,13 +3,12 @@ import linear_programming as LP
 
 if __name__ == "__main__":    
 
-    """
     lp = LP.LP()
     x = lp.add_variable(1)
     y = lp.add_variable(2)
     z = lp.add_variable(3)
     w = lp.add_variable(4)
-    lp.set_objective(LP.MAX, (1/2) * x + 3 * y + z + 4 * w)
+    lp.set_objective(LP.MIN, (1/2) * x + 3 * y + z + 4 * w)
     lp.add_constraint(x + y + z + w, LP.LESS_EQUAL, 40)
     lp.add_constraint(2 * x + y - z - w, LP.GREATER_EQUAL, 10)
     lp.add_constraint(w - y, LP.GREATER_EQUAL, 12)
@@ -22,6 +21,7 @@ if __name__ == "__main__":
     lp.add_constraint(x + y, LP.LESS_EQUAL, 20.5)
     lp.add_constraint(y + z, LP.GREATER_EQUAL, 20.5)
     lp.add_constraint(x + z, LP.GREATER_EQUAL, 30.5)
+    """
 
     
     x = lp.solve()
