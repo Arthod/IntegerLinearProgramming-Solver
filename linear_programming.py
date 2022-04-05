@@ -219,8 +219,9 @@ class LinearProgrammingProblem:
 
         return x_feasible
 
-    def is_feasible(self, x: np.array, tol=10e-5) -> bool:
-        return all(np.isclose(self.A @ x, self.b, atol=tol))
+    @staticmethod
+    def is_feasible(lp: "LinearProgrammingProblem", x: np.array, tol=10e-5) -> bool:
+        return all(np.isclose(lp.A @ x, lp.b, atol=tol))
 
     def solve(self, method=SOLVER_SIMPLEX):
         if (method == SOLVER_SIMPLEX):
