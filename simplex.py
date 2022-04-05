@@ -11,4 +11,5 @@ b = [40 10 12],
 c = [-0.5 -3.  -1.  -4.   0.   0.   0. ])
 """
 
-def simplex(A: np.array, b: np.array, c: np.array):
+def simplex(A: np.array, b: np.array, c: np.array) -> np.array:
+    raise Exception("Needs to be implemented")
