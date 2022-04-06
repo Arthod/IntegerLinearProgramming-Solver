@@ -6,6 +6,7 @@ from scipy.optimize import linprog
 import matplotlib.pyplot as plt
 
 import interior_point
+from simplex import simplex
 
 
 GREATER_EQUAL = -1
@@ -227,11 +228,7 @@ class LinearProgrammingProblem:
         if (method == SOLVER_SIMPLEX):
             lp_slacked = self.slacken_problem()
 
-            print(lp_slacked)
-
-            A = lp_slacked.A
-            b = lp_slacked.b
-            c = lp_slacked.c
+            simplex(lp_slacked.A, lp_slacked.b, lp_slacked.c)
             
 
 

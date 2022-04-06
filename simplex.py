@@ -13,7 +13,30 @@ c = [-0.5 -3.  -1.  -4.   0.   0.   0. ])
 
 
 def simplex(A: np.array, b: np.array, c: np.array) -> np.array:
-    pass
+    # https://sdu.itslearning.com/ContentArea/ContentArea.aspx?LocationID=17727&LocationType=1&ElementID=589350
+    x_current = basic_feasible_solution(A, b, c)
+    print(A, b, c)
+
+    ## Choosing a pivot
+    # Pick a non-negative column    TODO
+    positives = np.where(c > 0)
+    if (not len(positives[0])):
+        return "All coefficients negative"
+
+    x_index = positives[0][0]
+    y_index = None
+
+    val = float("inf")
+    a = A[:,x_index]
+    for i in range(b.size):
+        if (a[i] > 0):
+            val_current = b[i] / a[i]
+            if (val_current <= val):
+                y_index = i
+                val = val_current
+
+    print(y_index)
+    print(x_index)
 
 
 def basic_feasible_solution(A: np.array, b: np.array, c: np.array) -> np.array:
