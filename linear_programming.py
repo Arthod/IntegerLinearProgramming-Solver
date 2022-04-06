@@ -167,11 +167,7 @@ class LinearProgrammingProblem:
         """
         assert comparator in COMPARATORS
 
-        if (comparator == EQUAL):
-            self.constraints.append(Constraint(expr_LHS, GREATER_EQUAL, expr_RHS))
-            self.constraints.append(Constraint(expr_LHS, LESS_EQUAL, expr_RHS))
-        else:
-            self.constraints.append(Constraint(expr_LHS, comparator, expr_RHS))
+        self.constraints.append(Constraint(expr_LHS, comparator, expr_RHS))
 
         # Update flags
         self._A_updated = False
@@ -228,11 +224,13 @@ class LinearProgrammingProblem:
         if (method == SOLVER_SIMPLEX):
             lp_slacked = self.slacken_problem()
 
-            simplex(lp_slacked.A, lp_slacked.b, lp_slacked.c)
+            x_sol = simplex(lp_slacked.A, lp_slacked.b, lp_slacked.c, lp_slacked.vars_slack_amount)
             
+            # Cut slack variables
+            x_sol = x_sol[:lp_slacked.vars_slack_amount]
+            print(x_sol)
 
-
-            pass
+            return x_sol
 
         if (method == SOLVER_INTERIOR_POINT_METHOD):
             pass

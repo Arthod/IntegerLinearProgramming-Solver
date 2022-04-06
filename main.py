@@ -3,32 +3,32 @@ import linear_programming as LP
 
 if __name__ == "__main__":    
 
+    """
     lp = LP.LinearProgrammingProblem()
     x1 = lp.add_variable(1)
     x2 = lp.add_variable(2)
     lp.set_objective(LP.MAX, 6 * x1 + 8 * x2)
     lp.add_constraint(5 * x1 + 10 * x2, LP.LESS_EQUAL, 60)
     lp.add_constraint(4 * x1 + 4 * x2, LP.LESS_EQUAL, 40)
-    
     """
-    lp = LP.LP()
+    lp = LP.LinearProgrammingProblem()
     x = lp.add_variable(1)
     y = lp.add_variable(2)
     z = lp.add_variable(3)
     lp.set_objective(LP.MAX, x + 2 * y + 3 * z)
     lp.add_constraint(x + y, LP.LESS_EQUAL, 20.5)
-    lp.add_constraint(y + z, LP.GREATER_EQUAL, 20.5)
-    lp.add_constraint(x + z, LP.GREATER_EQUAL, 30.5)
-    """
+    lp.add_constraint(y + z, LP.LESS_EQUAL, 20.5)
+    lp.add_constraint(x + z, LP.LESS_EQUAL, 32.5)
+    
 
     
     x = lp.solve()
     
     print("z = " + str(x @ lp.c))
     print("x = " + str(x))
-    print("iterations = " + str(lp.iterations))
-    if (len(lp.variables) == 2):
-        lp.plot_solution_path()
+    #print("iterations = " + str(lp.iterations))
+    #if (len(lp.variables) == 2):
+    #    lp.plot_solution_path()
 
     
 
