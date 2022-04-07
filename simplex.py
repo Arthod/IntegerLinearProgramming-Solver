@@ -15,13 +15,11 @@ c = [-0.5 -3.  -1.  -4.   0.   0.   0. ])
 def simplex(A: np.array, b: np.array, c: np.array, slacks_amt: int) -> np.array:
     # https://sdu.itslearning.com/ContentArea/ContentArea.aspx?LocationID=17727&LocationType=1&ElementID=589350
     #x_current = basic_feasible_solution(A, b, c)
-    N = [i for i in range(c.size - slacks_amt)]   # Not In basis
-    B = [i for i in range(slacks_amt, c.size)]    # In basis
-
-    print(A, b, c)
-    print(N, B)
+    #N = [i for i in range(c.size - slacks_amt)]   # Not In basis
+    B = [i + (c.size - slacks_amt) for i in range(slacks_amt)]    # In basis
 
     while True:
+        tableau(A, b, c)
         ## Choosing a pivot
         # Pick a non-negative column    TODO
         positives = np.where(c > 0)
@@ -53,8 +51,8 @@ def simplex(A: np.array, b: np.array, c: np.array, slacks_amt: int) -> np.array:
         # Remove yy_old from basis and add yy to basis
         B.remove(yy_old)
         B.append(yy)
-        N.append(yy_old)
-        N.remove(yy)
+        #N.append(yy_old)
+        #N.remove(yy)
 
         ## Pivot: A[xx, yy] - Peform row operations
         # Set yy row with in column xx to 1
@@ -119,6 +117,9 @@ def zero_point_solution(A: np.array, b: np.array, c: np.array) -> np.array:
 def is_feasible(A: np.array, x: np.array, b: np.array, tol=10e-5) -> bool:
     return all(np.isclose(A @ x, b, atol=tol))
 
+
+def tableau(A: np.array, b: np.array, c: np.array):
+    print(A, b.T, c.T)
 
 if __name__ == "__main__":
     A = np.array([[ 1,  1,  1,  1,  1,  0,  0],

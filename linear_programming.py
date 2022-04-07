@@ -227,7 +227,7 @@ class LinearProgrammingProblem:
             x_sol = simplex(lp_slacked.A, lp_slacked.b, lp_slacked.c, lp_slacked.vars_slack_amount)
             
             # Cut slack variables
-            x_sol = x_sol[:lp_slacked.vars_slack_amount]
+            x_sol = x_sol[:lp_slacked.c.size - lp_slacked.vars_slack_amount]
             print(x_sol)
 
             return x_sol
