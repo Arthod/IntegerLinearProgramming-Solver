@@ -24,8 +24,8 @@ def interior_point_iteration(A, c, x_initial, alpha):
     x = D @ x_tilde
     return x
 
-def interior_point(A, c, x_initial, alpha=0.5, optimal_tol=10e-5):
-    iterations = 0
+def interior_point(A, c, x_initial, alpha=0.5, optimal_tol=10e-6):
+    iterations_count = 0
     path = [x_initial]
 
     x_prev = -10 * np.ones(c.size)
@@ -35,8 +35,8 @@ def interior_point(A, c, x_initial, alpha=0.5, optimal_tol=10e-5):
         x = interior_point_iteration(A, c, x, alpha)
         
         path.append(x)
-        iterations += 1
+        iterations_count += 1
 
-    return x, path, iterations
+    return x, path, iterations_count
 
     

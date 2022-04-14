@@ -6,7 +6,7 @@ from scipy.optimize import linprog
 import matplotlib.pyplot as plt
 
 import interior_point
-from simplex import simplex
+import simplex
 
 
 GREATER_EQUAL = -1
@@ -104,6 +104,10 @@ class LinearProgrammingProblem:
         lp.constraints = self.constraints.copy()
         lp.is_maximizing = self.is_maximizing
         lp.objective = self.objective.copy()
+
+        lp._A_updated = False
+        lp._b_updated = False
+        lp._c_updated = False
 
         return lp
         
@@ -220,22 +224,54 @@ class LinearProgrammingProblem:
     def is_feasible(lp: "LinearProgrammingProblem", x: np.array, tol=10e-5) -> bool:
         return all(np.isclose(lp.A @ x, lp.b, atol=tol))
 
-    def solve(self, method=SOLVER_SIMPLEX):
-        if (method == SOLVER_SIMPLEX):
-            lp_slacked = self.slacken_problem()
+    def solve(self, method=None):
+        lp_slacked = self.slacken_problem()
+        # Decide which solver to use
+        # Simplex?
+        if (method == None):
+            x_zero = simplex.zero_point_solution(lp_slacked.A, lp_slacked.b, lp_slacked.c)
+            if (simplex.is_feasible(lp_slacked.A, x_zero, lp_slacked.b)):
+                # If zero point solution is feasible, use simplex
+                method = SOLVER_SIMPLEX
 
-            x_sol = simplex(lp_slacked.A, lp_slacked.b, lp_slacked.c, lp_slacked.vars_slack_amount)
+        if (method == None):
+            # Solve using interior point algorithm
+            x_ones = np.ones(len(self.variables))
+            x_initial = np.hstack((x_ones, self.b - (self.A @ x_ones)))
+            if (self.is_feasible(self, x_initial)):
+                # IPA is feasible
+                method = SOLVER_INTERIOR_POINT_METHOD
+
+
+        x_sol = None
+        iterations_count = None
+
+        if (method == SOLVER_SIMPLEX):
+            # Solve using simplex
+            x_sol, iterations_count = simplex.simplex(lp_slacked.A, lp_slacked.b, lp_slacked.c, lp_slacked.vars_slack_amount)
             
             # Cut slack variables
             x_sol = x_sol[:lp_slacked.c.size - lp_slacked.vars_slack_amount]
-            print(x_sol)
 
-            return x_sol
+        elif (method == SOLVER_INTERIOR_POINT_METHOD):
+            # Solve using interior point algorithm
+            x_ones = np.ones(len(self.variables))
+            x_initial = np.hstack((x_ones, self.b - (self.A @ x_ones)))
 
-        if (method == SOLVER_INTERIOR_POINT_METHOD):
-            pass
+            #x_initial = np.array([1 for _ in range(len(lp_slacked.variables))])
+            x_sol, path, iterations_count = interior_point.interior_point(lp_slacked.A, lp_slacked.c, x_initial)
+
+            # Cut slack variables
+            x_sol = x_sol[:lp_slacked.c.size - lp_slacked.vars_slack_amount]
+
+        else:
+            print("No solution found")
+            return
+
+        print(f"Solving using {method}")
+        print(f"Solved in {iterations_count} iterations")
         
-        return "x"
+        return x_sol
 
 
     def plot_solution_path(self):

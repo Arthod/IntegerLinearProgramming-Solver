@@ -12,14 +12,17 @@ c = [-0.5 -3.  -1.  -4.   0.   0.   0. ])
 """
 
 
-def simplex(A: np.array, b: np.array, c: np.array, slacks_amt: int) -> np.array:
+def simplex(A: np.array, b: np.array, c: np.array, slacks_amt: int) -> "tuple[np.array, int]":
     # https://sdu.itslearning.com/ContentArea/ContentArea.aspx?LocationID=17727&LocationType=1&ElementID=589350
     #x_current = basic_feasible_solution(A, b, c)
     #N = [i for i in range(c.size - slacks_amt)]   # Not In basis
     B = [i + (c.size - slacks_amt) for i in range(slacks_amt)]    # In basis
+    # Zero basic solution
+
+    iterations_count = 0
 
     while True:
-        tableau(A, b, c)
+        iterations_count += 1
         ## Choosing a pivot
         # Pick a non-negative column    TODO
         positives = np.where(c > 0)
@@ -73,19 +76,19 @@ def simplex(A: np.array, b: np.array, c: np.array, slacks_amt: int) -> np.array:
     x_sol = np.zeros(c.size)
     for i in range(len(B)):
         x_sol[B[i]] = b[i]
-    return np.array(x_sol)
+    return np.array(x_sol), iterations_count
 
 def row_mult(A: np.array, row_index: int, scalar: int) -> np.array:
-    # Row operation: R1 = scalar * R1
-    # Inspiration: (TODO - optimize)
+    # Row operation: R1 = scalar * R1 (TODO - optimize)
+    # Inspiration:
     # https://personal.math.ubc.ca/~pwalls/math-python/linear-algebra/solving-linear-systems/
     I = np.eye(A.shape[0])
     I[row_index, row_index] = scalar
     return I @ A
 
 def row_add(A: np.array, row_main_index: int, row_other_index: int, scalar: int) -> np.array:
-    # Row operation: R1 = R1 + scalar * R2
-    # Inspiration: (TODO - optimize)
+    # Row operation: R1 = R1 + scalar * R2 (TODO - optimize)
+    # Inspiration:
     # https://personal.math.ubc.ca/~pwalls/math-python/linear-algebra/solving-linear-systems/
     
     I = np.eye(A.shape[0])
@@ -109,8 +112,7 @@ def zero_point_solution(A: np.array, b: np.array, c: np.array) -> np.array:
     slack_sign = [A[i][num_decision+i] for i in range(len(b))]
     slack_values = [b[i]/slack_sign[i] for i in range(b.size)]
     zero_point = np.hstack((np.zeros(num_decision), slack_values))
-    print("zero_point:", zero_point)
-    print("Zero point solution is feasible:", is_feasible(A, zero_point, b))
+    
     return zero_point
 
 
