@@ -3,7 +3,6 @@ import scipy
 import sympy
 import numpy as np
 from scipy.optimize import linprog
-import matplotlib.pyplot as plt
 
 import interior_point
 import simplex
@@ -56,6 +55,47 @@ class LinearProgrammingProblem:
 
         self.vars_slack_amount = 0
         self.vars_artificial_amount = 0
+
+    @staticmethod
+    def parse(problem_str: str) -> "LinearProgrammingProblem":
+        lp = LinearProgrammingProblem()
+
+        problem_list = []
+        for p in problem_str.split("\n"):
+            if (p.strip() != ""):
+                problem_list.append(p.strip())
+        
+        assert(len(problem_list) >= 2), "Format error: Atleast one constraint needed."
+        
+        # Objective function and variables
+        objective_function_str = problem_list[0].split("=")
+        is_maximizing = None
+        if ("minimize" in objective_function_str[0] or "min" in objective_function_str[0]):
+            is_maximizing = False
+        elif ("maximize" in objective_function_str[0] or "max" in objective_function_str[0]):
+            is_maximizing = True
+        assert is_maximizing is not None, "Format error: Ambigious whether to maximize or minimize."
+
+        # Variables
+        vars_possible = [symbol + str(i) for i in range(10) for symbol in ["x", "y", "z", "w"]]
+        variables = {}
+        for var in vars_possible:
+            if (var in objective_function_str[1]):
+                variables[var] = lp.add_variable(var)
+        assert (len(variables)), "Format error: Atleast one variable needed."
+
+        # Constraints
+        for p in problem_list[1:]:
+            comparator = None
+            RHS = None
+            LHS = None
+
+            
+
+        
+
+
+
 
     def __repr__(self):
         return f"A:\n{str(self.A)},\nb:\n{str(self.b)},\nc:\n{str(self.c)})"
@@ -270,6 +310,8 @@ class LinearProgrammingProblem:
 
         print(f"Solving using {method}")
         print(f"Solved in {iterations_count} iterations")
+        print("z = " + str(x_sol @ self.c))
+        print("x = " + str(x_sol))
         
         return x_sol
 

@@ -3,15 +3,16 @@ import linear_programming as LP
 
 if __name__ == "__main__":    
 
-    """
     lp = LP.LinearProgrammingProblem()
+    """
     x1 = lp.add_variable(1)
     x2 = lp.add_variable(2)
     lp.set_objective(LP.MAX, 6 * x1 + 8 * x2)
     lp.add_constraint(5 * x1 + 10 * x2, LP.LESS_EQUAL, 60)
     lp.add_constraint(4 * x1 + 4 * x2, LP.LESS_EQUAL, 40)
     """
-    lp = LP.LinearProgrammingProblem()
+
+    """
     x = lp.add_variable(1)
     y = lp.add_variable(2)
     z = lp.add_variable(3)
@@ -19,18 +20,38 @@ if __name__ == "__main__":
     lp.add_constraint(x + y, LP.LESS_EQUAL, 20.5)
     lp.add_constraint(y + z, LP.LESS_EQUAL, 20.5)
     lp.add_constraint(x + z, LP.LESS_EQUAL, 32.5)
-    
+    lp.solve()
+    """
 
+
+    x1 = lp.add_variable(1)
+    x2 = lp.add_variable(2)
+    x3 = lp.add_variable(3)
+    x4 = lp.add_variable(4)
+    x5 = lp.add_variable(5)
+    x6 = lp.add_variable(6)
+    lp.set_objective(LP.MIN, 900 * x1 + 1400 * x2 + 700 * x3 + 1000 * x4 + 1700 * x5 + 900 * x6)
+    lp.add_constraint(x1 + x2 + x3, LP.LESS_EQUAL, 10)
+    lp.add_constraint(x4 + x5 + x6, LP.LESS_EQUAL, 10)
+    lp.add_constraint(x1 + x4, LP.GREATER_EQUAL, 6)
+    lp.add_constraint(x2 + x5, LP.GREATER_EQUAL, 4)
+    lp.add_constraint(x3 + x6, LP.GREATER_EQUAL, 4)
+    lp.add_constraint(x4 - x6, LP.LESS_EQUAL, 0)
     
     x = lp.solve()
-    
-    print("z = " + str(x @ lp.c))
-    print("x = " + str(x))
-    #print("iterations = " + str(lp.iterations))
-    #if (len(lp.variables) == 2):
-    #    lp.plot_solution_path()
 
-    
+
+    lp = LP.LinearProgrammingProblem.parse("""
+        minimize z = 900x1 + 1400x2 + 700x3 + 1000x4 + 1700x5 + 900x6 subject to
+        x1 + x2 + x3 <= 10
+        x4 + x5 + x6 <= 10
+        x1 + x4 >= 6
+        x2 + x5 >= 4
+        x3 + x6 >= 4
+        x4 - x6 <= 0
+    """)
+
+
 
 
 
