@@ -23,7 +23,7 @@ if __name__ == "__main__":
     lp.solve()
     """
 
-
+    """
     x1 = lp.add_variable(1)
     x2 = lp.add_variable(2)
     x3 = lp.add_variable(3)
@@ -37,19 +37,27 @@ if __name__ == "__main__":
     lp.add_constraint(x2 + x5, LP.GREATER_EQUAL, 4)
     lp.add_constraint(x3 + x6, LP.GREATER_EQUAL, 4)
     lp.add_constraint(x4 - x6, LP.LESS_EQUAL, 0)
-    
-    x = lp.solve()
+    """
+
 
 
     lp = LP.LinearProgrammingProblem.parse("""
-        minimize z = 900x1 + 1400x2 + 700x3 + 1000x4 + 1700x5 + 900x6 subject to
-        x1 + x2 + x3 <= 10
-        x4 + x5 + x6 <= 10
-        x1 + x4 >= 6
-        x2 + x5 >= 4
-        x3 + x6 >= 4
-        x4 - x6 <= 0
+        Maximize p = x + 2y + 3z subject to 
+        x + y <= 20.5
+        y + z <= 20.5
+        x + z <= 30.5
     """)
+    lp.solve()
+
+    lp = LP.LinearProgrammingProblem.parse("""
+        Maximize p = 1x + 3y + z + 4w subject to 
+        x + y + z + w <= 40
+        2x + y - z - w >= 10
+        w - y >= 12
+    """)
+    print(lp.variables)
+    print(lp.constraints)
+    lp.solve()
 
 
 

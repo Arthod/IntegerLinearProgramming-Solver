@@ -12,7 +12,7 @@ GREATER_EQUAL = -1
 EQUAL = 0
 LESS_EQUAL = 1
 COMPARATORS = {
-    EQUAL: "==",
+    EQUAL: "=",
     GREATER_EQUAL: ">=",
     LESS_EQUAL: "<="
     }
@@ -58,6 +58,35 @@ class LinearProgrammingProblem:
 
     @staticmethod
     def parse(problem_str: str) -> "LinearProgrammingProblem":
+        def parse_equation(equation_str: str, variables: dict[str, sympy.core.Symbol]) -> sympy.core.Expr:
+            """
+            900x1 + 1400x2 + 700x3 + 1000x4 + 1700x5 + 900x6
+            900x1 + 1400x2 + 700x3 + 1000 * x4 + 1700x5 + 900x6
+            x4 + x5 + x6
+            x + y + z
+            """
+            equation = 0
+            # Add "*" between symbols and coefficient
+            equation_str = equation_str.replace(" ", "").replace("*", "")
+            equation_str_parts = equation_str.replace("-", "+").split("+")
+            operations = [s for s in equation_str if s == "+" or s == "-"]
+            if (equation_str[0] != "-" and equation_str[0] != "+"):
+                operations.insert(0, "+")
+            for i, equation_str_part in enumerate(equation_str_parts):
+                for variable_key, variable in variables.items():
+                    if (variable_key in equation_str_part):
+                        coefficient = equation_str_part.replace(variable_key, "")
+                        if (coefficient == ""):
+                            coefficient = 1
+                        else:
+                            coefficient = float(coefficient)
+                        if (operations[i] == "+"):
+                            equation = equation + coefficient * variable
+                        elif (operations[i] == "-"):
+                            equation = equation - coefficient * variable
+
+            return equation
+
         lp = LinearProgrammingProblem()
 
         problem_list = []
@@ -67,22 +96,27 @@ class LinearProgrammingProblem:
         
         assert(len(problem_list) >= 2), "Format error: Atleast one constraint needed."
         
-        # Objective function and variables
+        ## Objective function and variables
+        # Max or min?
         objective_function_str = problem_list[0].split("=")
         is_maximizing = None
-        if ("minimize" in objective_function_str[0] or "min" in objective_function_str[0]):
+        if ("min" in objective_function_str[0].lower()):
             is_maximizing = False
-        elif ("maximize" in objective_function_str[0] or "max" in objective_function_str[0]):
+        elif ("max" in objective_function_str[0].lower()):
             is_maximizing = True
         assert is_maximizing is not None, "Format error: Ambigious whether to maximize or minimize."
 
         # Variables
-        vars_possible = [symbol + str(i) for i in range(10) for symbol in ["x", "y", "z", "w"]]
+        vars_possible = [symbol + str(i) for i in range(10) for symbol in ["x", "y", "z", "w"]] + ["x", "y", "z", "w"]
         variables = {}
         for var in vars_possible:
             if (var in objective_function_str[1]):
                 variables[var] = lp.add_variable(var)
         assert (len(variables)), "Format error: Atleast one variable needed."
+
+        # Objective function
+        objective_function_expr = parse_equation(objective_function_str[1].replace("subject to", ""), variables)
+        lp.set_objective(is_maximizing, objective_function_expr)
 
         # Constraints
         for p in problem_list[1:]:
@@ -90,7 +124,22 @@ class LinearProgrammingProblem:
             RHS = None
             LHS = None
 
+            # Comparator
+            for comparator_name, comparator_symbol in COMPARATORS.items():
+                if (comparator_symbol in p):
+                    comparator = comparator_name
+            assert comparator is not None, "Format error: Invalid comparator."
+
+            # LHS & RHS
+            p = p.split(COMPARATORS[comparator])
+            assert len(p) == 2, "Format error: Invalid constraint"
+            LHS = parse_equation(p[0], variables)
+            RHS = float(p[1])
             
+            lp.add_constraint(LHS, comparator, RHS)
+
+        return lp
+
 
         
 
@@ -121,9 +170,11 @@ class LinearProgrammingProblem:
     def c(self) -> np.array:
         if (not self._c_updated):
             coeff_dict = self.objective.as_coefficients_dict()
-            #for _, symbol in self.variables.items(): # TODO name here instead of "x"?
-            #    c.append(coeff_dict.get(symbol, 0) * self.is_maximizing)
-            c = [coeff_dict.get(symbol, 0) * self.is_maximizing for _, symbol in self.variables.items()]
+
+            if (self.is_maximizing): mlt = 1
+            else: mlt = -1
+
+            c = [coeff_dict.get(symbol, 0) * mlt for _, symbol in self.variables.items()]
 
             self._c = np.array(c).astype(np.float)
             self._c_updated = True

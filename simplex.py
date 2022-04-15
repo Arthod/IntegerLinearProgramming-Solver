@@ -21,6 +21,8 @@ def simplex(A: np.array, b: np.array, c: np.array, slacks_amt: int) -> "tuple[np
 
     iterations_count = 0
 
+    print(A, b, c)
+
     while True:
         iterations_count += 1
         ## Choosing a pivot
