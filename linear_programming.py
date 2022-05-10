@@ -1,3 +1,4 @@
+import copy
 import itertools
 import scipy
 import sympy
@@ -191,10 +192,10 @@ class LinearProgrammingProblem:
     def copy(self) -> "LinearProgrammingProblem":
         lp = LinearProgrammingProblem()
 
-        lp.variables = self.variables.copy()
-        lp.constraints = self.constraints.copy()
+        lp.variables = copy.deepcopy(self.variables)
+        lp.constraints = copy.deepcopy(self.constraints)
         lp.is_maximizing = self.is_maximizing
-        lp.objective = self.objective.copy()
+        lp.objective = copy.deepcopy(self.objective)
 
         lp._A_updated = False
         lp._b_updated = False
@@ -320,7 +321,7 @@ class LinearProgrammingProblem:
         # Decide which solver to use
         # Simplex?
         if (method == None):
-            x_zero = simplex.zero_point_solution(lp_slacked.A, lp_slacked.b, lp_slacked.c)
+            x_zero = simplex.zero_point_solution(lp_slacked.A, lp_slacked.b, lp_slacked.c, len(self.variables))
             if (simplex.is_feasible(lp_slacked.A, x_zero, lp_slacked.b)):
                 # If zero point solution is feasible, use simplex
                 method = SOLVER_SIMPLEX

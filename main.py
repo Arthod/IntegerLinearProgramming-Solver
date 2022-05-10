@@ -47,18 +47,21 @@ if __name__ == "__main__":
         y + z <= 20.5
         x + z <= 30.5
     """)
+    w = lp.add_variable("w")
+    x = lp.variables["x_x"]
+    lp.add_constraint(w + x, LP.LESS_EQUAL, 10)
+    
     lp.solve()
 
-    lp = LP.LinearProgrammingProblem.parse("""
-        Maximize p = 1x + 3y + z + 4w subject to 
-        x + y + z + w <= 40
-        2x + y - z - w >= 10
-        w - y >= 12
-    """)
-    print(lp.variables)
-    print(lp.constraints)
-    lp.solve()
-
+    #lp = LP.LinearProgrammingProblem.parse("""
+    #    Maximize p = 1x + 3y + z + 4w subject to 
+    #    x + y + z + w <= 40
+    #    2x + y - z - w >= 10
+    #    w - y >= 12
+    #""")
+    #print(lp.variables)
+    #print(lp.constraints)
+    #lp.solve()
 
 
 

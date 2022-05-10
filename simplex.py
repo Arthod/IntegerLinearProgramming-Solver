@@ -109,11 +109,10 @@ def basic_feasible_solution(A: np.array, b: np.array, c: np.array) -> np.array:
 """
 Feasible when all b ≥ 0, since x = 0 is feasible 
 """
-def zero_point_solution(A: np.array, b: np.array, c: np.array) -> np.array:
-    num_decision = len([i for i in c if i != 0])
-    slack_sign = [A[i][num_decision+i] for i in range(len(b))]
+def zero_point_solution(A: np.array, b: np.array, c: np.array, vars_count: int) -> np.array:
+    slack_sign = [A[i][vars_count + i] for i in range(len(b))]
     slack_values = [b[i]/slack_sign[i] for i in range(b.size)]
-    zero_point = np.hstack((np.zeros(num_decision), slack_values))
+    zero_point = np.hstack((np.zeros(vars_count), slack_values))
     
     return zero_point
 
