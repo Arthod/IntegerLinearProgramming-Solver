@@ -1,6 +1,7 @@
 import linear_programming as LP
 
 
+
 if __name__ == "__main__":    
 
     lp = LP.LinearProgrammingProblem()
@@ -42,16 +43,16 @@ if __name__ == "__main__":
 
 
     lp = LP.LinearProgrammingProblem.parse("""
-        Maximize p = x + 2y + 3z subject to 
-        x + y <= 20.5
-        y + z <= 20.5
-        x + z <= 30.5
+        Maximize p = 1x + 3y + z + 4w subject to 
+        x + y + z + w <= 40
+        2x + y - z - w >= 10
+        w - y >= 12
     """)
-    w = lp.add_variable("w")
-    x = lp.variables["x_x"]
-    lp.add_constraint(w + x, LP.LESS_EQUAL, 10)
+    #w = lp.add_variable("w")
+    #x = lp.variables["x_x"]
+    #lp.add_constraint(w + x, LP.LESS_EQUAL, 10)
     
-    lp.solve()
+    lp.solve(method=LP.SOLVER_INTERIOR_POINT_METHOD)
 
     #lp = LP.LinearProgrammingProblem.parse("""
     #    Maximize p = 1x + 3y + z + 4w subject to 

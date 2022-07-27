@@ -4,9 +4,11 @@ import scipy
 import sympy
 import numpy as np
 from scipy.optimize import linprog
+from typing import Dict # for type hinting
 
 import interior_point
 import simplex
+
 
 
 GREATER_EQUAL = -1
@@ -24,7 +26,6 @@ MIN = -1
 SOLVER_SIMPLEX = "simplex"
 SOLVER_INTERIOR_POINT_METHOD = "interiorPointMethod"
 
-
 class Constraint:
     def __init__(self, expr_LHS, comparator, expr_RHS):
         self.expr_LHS = expr_LHS
@@ -39,7 +40,7 @@ class Constraint:
 class LinearProgrammingProblem:
     def __init__(self):
         # Problem definition
-        self.variables: dict[str, sympy.Symbol] = {}
+        self.variables: Dict[str, sympy.Symbol] = {}
         self.constraints: list[Constraint] = []
         self.is_maximizing: bool = None
         self.objective: sympy.core.Expr = None
@@ -59,7 +60,7 @@ class LinearProgrammingProblem:
 
     @staticmethod
     def parse(problem_str: str) -> "LinearProgrammingProblem":
-        def parse_equation(equation_str: str, variables: dict[str, sympy.core.Symbol]) -> sympy.core.Expr:
+        def parse_equation(equation_str: str, variables: Dict[str, sympy.core.Symbol]) -> sympy.core.Expr:
             """
             900x1 + 1400x2 + 700x3 + 1000x4 + 1700x5 + 900x6
             900x1 + 1400x2 + 700x3 + 1000 * x4 + 1700x5 + 900x6
@@ -108,7 +109,7 @@ class LinearProgrammingProblem:
         assert is_maximizing is not None, "Format error: Ambigious whether to maximize or minimize."
 
         # Variables
-        vars_possible = [symbol + str(i) for i in range(10) for symbol in ["x", "y", "z", "w"]] + ["x", "y", "z", "w"]
+        vars_possible = [symbol + str(i) for i in range(10) for symbol in ["a", "b", "c", "d", "x", "y", "z", "w"]] + ["a", "b", "c", "d", "x", "y", "z", "w"]
         variables = {}
         for var in vars_possible:
             if (var in objective_function_str[1]):
