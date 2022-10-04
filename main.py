@@ -52,7 +52,7 @@ if __name__ == "__main__":
     #x = lp.variables["x_x"]
     #lp.add_constraint(w + x, LP.LESS_EQUAL, 10)
     
-    lp.solve(method=LP.SOLVER_INTERIOR_POINT_METHOD)
+    lp.solve(method=LP.SOLVER_SIMPLEX)
 
     #lp = LP.LinearProgrammingProblem.parse("""
     #    Maximize p = 1x + 3y + z + 4w subject to 
